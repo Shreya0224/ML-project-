@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Coding Skill Gap Detector v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+/* ═══════════════════════════════ TOKENS ═══════════════════════════════════ */
+:root{
+  --bg:#070910;--surface:#0e1117;--s2:#151920;--s3:#1c2130;--s4:#232b3a;
+  --border:#252d3a;--border-hi:#374155;
+  --accent:#00e5ff;--accent-d:rgba(0,229,255,.11);--accent-g:rgba(0,229,255,.32);
+  --green:#34d399;--green-d:rgba(52,211,153,.11);
+  --amber:#fbbf24;--amber-d:rgba(251,191,36,.11);
+  --red:#f87171;--red-d:rgba(248,113,113,.11);
+  --purple:#a78bfa;--purple-d:rgba(167,139,250,.11);
+  --pink:#f472b6;--pink-d:rgba(244,114,182,.11);
+  --sky:#38bdf8;--sky-d:rgba(56,189,248,.11);
+  --t1:#dde4f0;--t2:#7d8ba0;--t3:#424f66;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+  --sans:'Inter',system-ui,sans-serif;
+  --display:'Syne',sans-serif;
+  --r:10px;--rl:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--mono);background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,229,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.018) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0}
+
+/* ═══════════════════════════ SCROLLBAR ════════════════════════════════════ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+
+/* ═══════════════════════════ HEADER ═══════════════════════════════════════ */
+.site-header{position:relative;z-index:20;border-bottom:1px solid var(--border);
+  background:rgba(7,9,16,.93);backdrop-filter:blur(14px)}
+.header-inner{max-width:1200px;margin:0 auto;padding:18px 24px 0;
+  display:flex;flex-direction:column;align-items:center}
+.header-top{display:flex;align-items:center;justify-content:space-between;
+  width:100%;flex-wrap:wrap;gap:12px}
+.logo-group{display:flex;align-items:center;gap:12px}
+.logo-icon{width:38px;height:38px;background:var(--accent-d);
+  border:1px solid rgba(0,229,255,.3);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.logo-text{font-family:var(--display);font-size:18px;font-weight:800;
+  letter-spacing:-.025em;
+  background:linear-gradient(135deg,var(--t1) 0%,var(--accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-ver{font-size:9px;color:var(--t3);letter-spacing:.15em;margin-left:4px;
+  -webkit-text-fill-color:var(--t3)}
+.header-badge{display:inline-flex;align-items:center;gap:7px;
+  font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);border:1px solid var(--accent-d);background:var(--accent-d);
+  padding:4px 13px;border-radius:100px}
+.header-badge::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 6px var(--accent);
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+
+/* ═══════════════════════════ NAV TABS ═════════════════════════════════════ */
+.nav-tabs{display:flex;width:100%;overflow-x:auto;margin-top:16px}
+.nav-tabs::-webkit-scrollbar{height:0}
+.nav-tab{display:inline-flex;align-items:center;gap:7px;
+  padding:10px 18px 12px;font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--t3);
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  cursor:pointer;white-space:nowrap;transition:color .2s,border-color .2s}
+.nav-tab:hover{color:var(--t2)}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-icon{font-size:14px}
+
+/* ═══════════════════════════ PAGES ════════════════════════════════════════ */
+.page{display:none;animation:pageIn .26s ease both;position:relative;z-index:10}
+.page.active{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+main{position:relative;z-index:10;max-width:1200px;margin:0 auto;padding:34px 22px 90px}
+
+/* ═══════════════════════════ PANEL ════════════════════════════════════════ */
+.panel{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);overflow:hidden;transition:border-color .3s}
+.panel:focus-within{border-color:var(--border-hi)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 17px;border-bottom:1px solid var(--border);background:var(--s2)}
+.panel-title{display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.dot{width:8px;height:8px;border-radius:50%}
+
+/* ═══════════════════════════ BUTTONS ══════════════════════════════════════ */
+.btn{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.06em;
+  border-radius:8px;border:none;cursor:pointer;transition:all .2s;
+  padding:9px 17px;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#fff;box-shadow:0 0 22px var(--accent-g);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-ghost{background:var(--s3);color:var(--t2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--t1);border-color:var(--border-hi)}
+.btn-red{background:var(--red-d);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.btn-red:hover{border-color:var(--red)}
+.btn-green{background:var(--green-d);color:var(--green);border:1px solid rgba(52,211,153,.28)}
+.btn-green:hover{border-color:var(--green)}
+.btn-purple{background:var(--purple-d);color:var(--purple);border:1px solid rgba(167,139,250,.28)}
+.btn-purple:hover{border-color:var(--purple)}
+
+/* ═══════════════════════════ LANG SELECT ══════════════════════════════════ */
+.lang-select{appearance:none;-webkit-appearance:none;font-family:var(--mono);
+  font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--accent-d);
+  border:1px solid rgba(0,229,255,.28);border-radius:6px;
+  padding:5px 28px 5px 10px;cursor:pointer;outline:none;transition:border-color .2s;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2300e5ff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center}
+.lang-select:hover{border-color:var(--accent)}
+
+/* ═══════════════════════════ EDITOR ═══════════════════════════════════════ */
+.editor-wrap{position:relative}
+.line-numbers{position:absolute;top:0;left:0;width:44px;padding:16px 0;
+  text-align:right;font-size:12px;line-height:1.65;color:var(--t3);
+  user-select:none;pointer-events:none}
+#codeEditor{display:block;width:100%;min-height:310px;
+  padding:16px 16px 16px 56px;font-family:var(--mono);font-size:13px;
+  line-height:1.65;color:var(--t1);background:transparent;border:none;
+  outline:none;resize:vertical;tab-size:2;caret-color:var(--accent)}
+#codeEditor::placeholder{color:var(--t3)}
+.action-row{display:flex;align-items:center;gap:9px;padding:11px 17px;
+  border-top:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
+
+/* ═══════════════════════════ SCORE RING ═══════════════════════════════════ */
+.score-ring-wrap{position:relative;flex-shrink:0;width:88px;height:88px}
+.ring-svg{transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--s3);stroke-width:7}
+.ring-fill{fill:none;stroke-width:7;stroke-linecap:round;
+  stroke-dasharray:226;stroke-dashoffset:226;
+  transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1),stroke .5s ease}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-family:var(--display);font-size:22px;font-weight:800}
+.score-meta{flex:1;min-width:0}
+.skill-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;
+  font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  padding:4px 12px;border-radius:100px;margin-bottom:6px}
+.skill-badge.beginner    {background:var(--green-d);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.skill-badge.intermediate{background:var(--amber-d);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.skill-badge.advanced    {background:var(--accent-d);color:var(--accent);border:1px solid rgba(0,229,255,.3)}
+.score-section{padding:22px 17px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--border)}
+.score-label{font-size:11px;color:var(--t2)}
+
+/* ═══════════════════════════ GAP ITEMS ════════════════════════════════════ */
+.result-section{padding:14px 17px;border-bottom:1px solid var(--border)}
+.result-section:last-child{border-bottom:none}
+.section-title{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.gap-item{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;
+  border-radius:var(--r);margin-bottom:5px;font-size:12px;line-height:1.55;
+  animation:fadeSlide .38s ease both}
+.gap-item:last-child{margin-bottom:0}
+.gap-item.weakness  {background:var(--red-d);   color:#fca5a5;border:1px solid rgba(248,113,113,.14)}
+.gap-item.suggestion{background:var(--green-d); color:#86efac;border:1px solid rgba(52,211,153,.14)}
+.gap-item.smell     {background:var(--amber-d); color:#fde68a;border:1px solid rgba(251,191,36,.14)}
+.gap-icon{flex-shrink:0;margin-top:1px;font-size:13px}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══════════════════════════ EMPTY / LOADING ══════════════════════════════ */
+.empty-state{padding:55px 22px;text-align:center;color:var(--t3)}
+.empty-icon{font-size:36px;margin-bottom:14px;opacity:.45}
+.empty-state p{font-size:12px;line-height:1.8}
+.loader-wrap{padding:55px 22px;text-align:center}
+.loader{display:inline-block;width:34px;height:34px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-size:12px;color:var(--t2);animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.page-locked{text-align:center;padding:80px 22px;color:var(--t3)}
+.page-locked-icon{font-size:44px;margin-bottom:18px}
+.page-locked p{font-size:13px;line-height:1.85}
+.page-locked strong{color:var(--accent)}
+
+/* ═══════════════════════════ GRID LAYOUTS ═════════════════════════════════ */
+.workspace{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.improvements-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;align-items:start}
+@media(max-width:820px){.workspace,.analysis-grid,.improvements-grid{grid-template-columns:1fr}}
+
+/* ═══════════════════════════ INFO CARDS ═══════════════════════════════════ */
+.info-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:20px 18px;transition:border-color .25s}
+.info-card:hover{border-color:var(--border-hi)}
+.info-card-label{font-size:10px;font-weight:600;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:12px;
+  display:flex;align-items:center;gap:6px}
+.analysis-hero{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:24px 22px;display:flex;
+  align-items:center;gap:22px;margin-bottom:18px;flex-wrap:wrap}
+.page-heading{font-family:var(--display);font-size:20px;font-weight:700;
+  color:var(--t1);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.page-heading span{color:var(--t3);font-size:14px;font-weight:400;font-family:var(--mono)}
+
+/* ═══════════════════════════ COMPLEXITY BADGE ═════════════════════════════ */
+.complexity-badge{display:inline-block;font-family:var(--mono);font-size:28px;
+  font-weight:700;color:var(--amber);background:var(--amber-d);
+  border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:10px 20px;margin-bottom:8px}
+
+/* ═══════════════════════════ SIMILARITY RING ══════════════════════════════ */
+.sim-ring-wrap{position:relative;width:100px;height:100px;margin:0 auto}
+.sim-ring-svg{transform:rotate(-90deg)}
+.sim-track{fill:none;stroke:var(--s3);stroke-width:8}
+.sim-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:251;
+  stroke-dashoffset:251;stroke:var(--purple);
+  transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)}
+.sim-num{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-family:var(--display);font-size:20px;font-weight:800;color:var(--purple)}
+.sim-label{text-align:center;font-size:11px;color:var(--t2);margin-top:10px}
+
+/* ═══════════════════════════ ML CONFIDENCE BARS ═══════════════════════════ */
+.conf-bar-row{margin-bottom:12px}
+.conf-bar-row:last-child{margin-bottom:0}
+.conf-bar-label{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px}
+.conf-bar-track{height:6px;background:var(--s3);border-radius:100px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:100px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.conf-beg{background:linear-gradient(90deg,#166534,var(--green))}
+.conf-int{background:linear-gradient(90deg,#92400e,var(--amber))}
+.conf-adv{background:linear-gradient(90deg,#1e3a5f,var(--accent))}
+
+/* ═══════════════════════════ QUALITY BARS ═════════════════════════════════ */
+.bar-row{margin-bottom:16px}
+.bar-row:last-child{margin-bottom:0}
+.bar-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bar-label{font-size:11px;color:var(--t2);letter-spacing:.07em}
+.bar-value{font-size:12px;font-weight:700}
+.bar-track{height:7px;background:var(--s3);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.bf-read{background:linear-gradient(90deg,#0369a1,var(--sky))}
+.bf-eff {background:linear-gradient(90deg,#065f46,var(--green))}
+.bf-str {background:linear-gradient(90deg,#4c1d95,var(--purple))}
+.bf-mnt {background:linear-gradient(90deg,#831843,var(--pink))}
+.quality-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:22px 20px}
+.quality-title{font-family:var(--display);font-size:15px;font-weight:700;
+  color:var(--t1);margin-bottom:18px}
+
+/* ═══════════════════════════ CODE BLOCK ═══════════════════════════════════ */
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.code-block-header{display:flex;align-items:center;justify-content:space-between;
+  padding:11px 17px;background:var(--s2);border-bottom:1px solid var(--border)}
+.code-block pre{font-family:var(--mono);font-size:12px;line-height:1.72;
+  color:var(--t1);padding:18px 20px;overflow:auto;max-height:460px;white-space:pre}
+
+/* ═══════════════════════════ STAT CHIPS ═══════════════════════════════════ */
+.stat-chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.stat-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  padding:9px 16px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:90px}
+.chip-val{font-family:var(--display);font-size:20px;font-weight:800}
+.chip-lbl{font-size:10px;color:var(--t3);letter-spacing:.12em;text-transform:uppercase}
+
+/* ═══════════════════════════ REPORT ═══════════════════════════════════════ */
+.report-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.report-top{background:linear-gradient(135deg,var(--s2) 0%,var(--s3) 100%);
+  padding:26px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;gap:20px;flex-wrap:wrap}
+.report-main-title{font-family:var(--display);font-size:20px;font-weight:800;color:var(--t1);margin-bottom:4px}
+.report-meta{font-size:11px;color:var(--t2)}
+.report-body{padding:22px 26px}
+.report-section{margin-bottom:20px}
+.report-section:last-child{margin-bottom:0}
+.report-section-title{font-size:10px;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--t3);margin-bottom:10px;
+  padding-bottom:8px;border-bottom:1px solid var(--border)}
+.report-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid rgba(37,45,58,.5);font-size:12px}
+.report-row:last-child{border-bottom:none}
+.report-row-key{color:var(--t2)}
+.report-row-val{color:var(--t1);font-weight:500}
+.report-list-item{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;
+  border-radius:7px;font-size:12px;line-height:1.55;margin-bottom:4px}
+.report-list-item.w{background:var(--red-d);color:#fca5a5}
+.report-list-item.s{background:var(--green-d);color:#86efac}
+.report-list-item.sm{background:var(--amber-d);color:#fde68a}
+.report-actions{display:flex;gap:10px;padding:18px 26px;
+  border-top:1px solid var(--border);background:var(--s2);flex-wrap:wrap}
+
+/* ═══════════════════════════ HOME HERO ════════════════════════════════════ */
+.home-hero{text-align:center;padding:36px 22px 28px}
+.home-title{font-family:var(--display);font-size:clamp(28px,5vw,54px);
+  font-weight:800;letter-spacing:-.03em;line-height:1.08;
+  background:linear-gradient(135deg,var(--t1) 30%,var(--accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px}
+.home-desc{font-family:var(--sans);font-size:14px;color:var(--t2);line-height:1.85;
+  max-width:580px;margin:0 auto 28px}
+.home-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:12px;margin-bottom:32px}
+.feature-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:18px 16px;text-align:left;
+  transition:border-color .25s,transform .2s}
+.feature-card:hover{border-color:var(--border-hi);transform:translateY(-2px)}
+.feature-icon{font-size:22px;margin-bottom:9px}
+.feature-title{font-family:var(--display);font-size:13px;font-weight:700;
+  color:var(--t1);margin-bottom:5px}
+.feature-desc{font-size:11px;color:var(--t2);line-height:1.65;font-family:var(--sans)}
+
+/* ═══════════════════════════ ABOUT PAGE ═══════════════════════════════════ */
+.about-section{margin-bottom:32px}
+.about-h2{font-family:var(--display);font-size:17px;font-weight:700;
+  color:var(--t1);margin-bottom:14px;padding-bottom:10px;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.about-p{font-family:var(--sans);font-size:13px;color:var(--t2);
+  line-height:1.85;margin-bottom:10px}
+.about-p:last-child{margin-bottom:0}
+.about-p strong{color:var(--t1)}
+.about-p code{font-family:var(--mono);font-size:11px;
+  background:var(--s3);padding:2px 6px;border-radius:4px;color:var(--accent)}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.about-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:20px 18px}
+.about-card-icon{font-size:24px;margin-bottom:10px}
+.about-card-title{font-family:var(--display);font-size:14px;font-weight:700;
+  color:var(--t1);margin-bottom:8px}
+.about-card-body{font-family:var(--sans);font-size:12px;color:var(--t2);line-height:1.75}
+.about-card-body strong{color:var(--t1)}
+.about-card-body code{font-family:var(--mono);font-size:10px;
+  background:var(--s3);padding:1px 5px;border-radius:3px;color:var(--accent)}
+.algo-step{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.algo-step:last-child{margin-bottom:0}
+.step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;
+  background:var(--accent-d);border:1px solid rgba(0,229,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--accent)}
+.step-body{flex:1}
+.step-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:4px;font-family:var(--display)}
+.step-desc{font-size:12px;color:var(--t2);line-height:1.75;font-family:var(--sans)}
+.step-desc strong{color:var(--t1)}
+.step-desc code{font-family:var(--mono);font-size:10px;background:var(--s3);
+  padding:1px 5px;border-radius:3px;color:var(--accent)}
+.lang-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.lang-table th{text-align:left;font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--t3);padding:8px 12px;border-bottom:1px solid var(--border);font-weight:600}
+.lang-table td{padding:9px 12px;border-bottom:1px solid rgba(37,45,58,.5);color:var(--t2);font-family:var(--sans)}
+.lang-table td:first-child{color:var(--t1);font-family:var(--mono);font-weight:500}
+.lang-table tr:last-child td{border-bottom:none}
+.lang-table tr:hover td{background:var(--s2)}
+.tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 8px;
+  border-radius:4px;letter-spacing:.06em;font-weight:500}
+.tag-green{background:var(--green-d);color:var(--green)}
+.tag-amber{background:var(--amber-d);color:var(--amber)}
+.tag-sky  {background:var(--sky-d);  color:var(--sky)}
+.tag-purple{background:var(--purple-d);color:var(--purple)}
+.tag-pink{background:var(--pink-d);color:var(--pink)}
+.halstead-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.h-chip{background:var(--s3);border:1px solid var(--border);border-radius:8px;
+  padding:10px;text-align:center}
+.h-val{font-family:var(--display);font-size:16px;font-weight:800;color:var(--accent)}
+.h-lbl{font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+
+/* ═══════════════════════════ TOAST ════════════════════════════════════════ */
+#toast{position:fixed;bottom:26px;left:50%;
+  transform:translateX(-50%) translateY(80px);background:var(--s2);
+  color:var(--red);border:1px solid rgba(248,113,113,.4);border-radius:var(--r);
+  padding:11px 22px;font-size:12px;z-index:999;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);white-space:nowrap}
+#toast.visible{transform:translateX(-50%) translateY(0)}
+#toast.success{color:var(--green);border-color:rgba(52,211,153,.4)}
+
+/* ═══════════════════════════ FOOTER ═══════════════════════════════════════ */
+footer{position:relative;z-index:10;text-align:center;padding:18px 22px;
+  border-top:1px solid var(--border);font-size:11px;color:var(--t3)}
+footer span{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER + NAV ════════════════════════════════════════════════════════ -->
+<div class="site-header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="logo-group">
+        <div class="logo-icon">⚡</div>
+        <span class="logo-text">Skill Gap Detector<span class="logo-ver">v3</span></span>
+      </div>
+      <div class="header-badge">ML-Powered · 8 Languages</div>
+    </div>
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-page="page-home"         onclick="showPage('page-home',this)"         role="tab"><span class="tab-icon">🏠</span>Home</button>
+      <button class="nav-tab"        data-page="page-analysis"     onclick="showPage('page-analysis',this)"     role="tab" id="tab-analysis"><span class="tab-icon">📊</span>Analysis</button>
+      <button class="nav-tab"        data-page="page-improvements" onclick="showPage('page-improvements',this)" role="tab" id="tab-imp"><span class="tab-icon">⚡</span>Improvements</button>
+      <button class="nav-tab"        data-page="page-metrics"      onclick="showPage('page-metrics',this)"      role="tab" id="tab-met"><span class="tab-icon">📐</span>Metrics</button>
+      <button class="nav-tab"        data-page="page-report"       onclick="showPage('page-report',this)"       role="tab" id="tab-rep"><span class="tab-icon">📄</span>Report</button>
+      <button class="nav-tab"        data-page="page-about"        onclick="showPage('page-about',this)"        role="tab"><span class="tab-icon">📖</span>About</button>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+<!-- ════════════════════════ PAGE: HOME ════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-hero">
+    <h1 class="home-title">AI-Powered Code<br>Skill Gap Detector</h1>
+    <p class="home-desc">Paste any code snippet, choose a language, and receive an instant ML-based report covering skill classification, weakness detection, time complexity, code quality metrics, and an auto-improved version — all from a TF-IDF + Logistic Regression pipeline.</p>
+    <div class="home-features">
+      <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">ML Classification</div><div class="feature-desc">TF-IDF character n-grams + Logistic Regression trained on 60+ snippets across 8 languages classifies Beginner, Intermediate, or Advanced.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔍</div><div class="feature-title">Gap Detection</div><div class="feature-desc">20+ rule-based detectors per language find missing error handling, OOP, type hints, comments, unit tests, and algorithmic smells.</div></div>
+      <div class="feature-card"><div class="feature-icon">⏱</div><div class="feature-title">Complexity Analysis</div><div class="feature-desc">Heuristic engine infers O(1) through O(n³) time complexity plus Halstead volume, cyclomatic complexity, and maintainability index.</div></div>
+      <div class="feature-card"><div class="feature-icon">🌍</div><div class="feature-title">8 Languages</div><div class="feature-desc">Python · JavaScript · TypeScript · Java · C++ · C# · Ruby · Go — each with language-specific gap detectors and ideal reference code.</div></div>
+      <div class="feature-card"><div class="feature-icon">🎯</div><div class="feature-title">Cosine Similarity</div><div class="feature-desc">Compares your code against a curated reference solution in TF-IDF vector space to quantify structural alignment with ideal patterns.</div></div>
+      <div class="feature-card"><div class="feature-icon">📄</div><div class="feature-title">Downloadable Report</div><div class="feature-desc">Generate a complete .txt report with all metrics, weaknesses, suggestions, Halstead metrics, and improved code in one click.</div></div>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <!-- Editor -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <span class="dot" style="background:#f87171"></span>
+          <span class="dot" style="background:#fbbf24"></span>
+          <span class="dot" style="background:#34d399"></span>
+          &nbsp;code_editor
+        </span>
+        <select class="lang-select" id="langSelect" title="Language">
+          <option value="python">Python</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="java">Java</option>
+          <option value="cpp">C++</option>
+          <option value="csharp">C#</option>
+          <option value="ruby">Ruby</option>
+          <option value="go">Go</option>
+        </select>
+      </div>
+      <div class="editor-wrap">
+        <div class="line-numbers" id="lineNumbers">1</div>
+        <textarea id="codeEditor" spellcheck="false" autocorrect="off" autocapitalize="off"
+          placeholder="# Paste your code here…&#10;# Example:&#10;def greet(name):&#10;    print('Hello,', name)&#10;&#10;greet('World')"></textarea>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeCode()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Analyze Code
+        </button>
+        <button class="btn btn-ghost" onclick="loadSample()">📄 Sample</button>
+        <button class="btn btn-red"   onclick="clearEditor()">🗑 Clear</button>
+        <span style="font-size:10px;color:var(--t3);margin-left:auto">Ctrl+Enter</span>
+      </div>
+    </div>
+
+    <!-- Quick Results -->
+    <div class="panel" id="homeResultsPanel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          quick_result
+        </span>
+        <span style="font-size:10px;color:var(--t3);letter-spacing:.08em" id="statusLabel">READY</span>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⌨️</div>
+        <p>Paste code and click <strong style="color:var(--accent)">Analyze Code</strong><br>to see instant ML feedback here.</p>
+      </div>
+      <div class="loader-wrap" id="loadingState" style="display:none">
+        <div class="loader"></div>
+        <div class="loader-text">Running ML pipeline…</div>
+      </div>
+      <div id="homeResults" style="display:none">
+        <div class="score-section">
+          <div class="score-ring-wrap">
+            <svg class="ring-svg" width="88" height="88" viewBox="0 0 88 88">
+              <circle class="ring-track" cx="44" cy="44" r="36"/>
+              <circle class="ring-fill" id="scoreRing" cx="44" cy="44" r="36"/>
+            </svg>
+            <div class="score-num" id="scoreNum">0</div>
+          </div>
+          <div class="score-meta">
+            <div class="skill-badge" id="skillBadge">—</div>
+            <div class="score-label" id="homeScoreLabel">Score · lines</div>
+          </div>
+        </div>
+        <div class="result-section">
+          <div class="section-title">⚠ Weaknesses</div>
+          <div id="homeWeakList"></div>
+        </div>
+        <div class="result-section">
+          <div class="section-title">→ Suggestions</div>
+          <div id="homeSuggList"></div>
+        </div>
+        <div class="action-row" style="justify-content:center;gap:8px">
+          <button class="btn btn-ghost" style="font-size:11px" onclick="goTo('page-analysis')">📊 Full Analysis</button>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="goTo('page-metrics')">📐 Metrics</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════ PAGE: ANALYSIS ════════════════════════════════ -->
+<div class="page" id="page-analysis">
+  <div id="al" class="page-locked"><div class="page-locked-icon">📊</div><p>Run an analysis on the <strong>Home</strong> tab first.</p></div>
+  <div id="ac" style="display:none">
+    <div class="page-heading">Analysis Results <span id="aTimestamp"></span></div>
+    <div class="analysis-hero">
+      <div class="score-ring-wrap">
+        <svg class="ring-svg" width="88" height="88" viewBox="0 0 88 88">
+          <circle class="ring-track" cx="44" cy="44" r="36"/>
+          <circle class="ring-fill" id="scoreRing2" cx="44" cy="44" r="36"/>
+        </svg>
+        <div class="score-num" id="scoreNum2">0</div>
+      </div>
+      <div>
+        <div class="skill-badge" id="skillBadge2">—</div>
+        <div class="score-label" id="aLines"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--t3)" id="aLangProfile"></div>
+      </div>
+    </div>
+
+    <!-- ML Confidence -->
+    <div class="info-card" style="margin-bottom:18px">
+      <div class="info-card-label">🤖 ML Confidence Breakdown</div>
+      <div class="conf-bar-row">
+        <div class="conf-bar-label"><span style="color:var(--green)">Beginner</span><span id="confBeg" style="color:var(--green)">0%</span></div>
+        <div class="conf-bar-track"><div class="conf-bar-fill conf-beg" id="confBegBar"></div></div>
+      </div>
+      <div class="conf-bar-row" style="margin-top:10px">
+        <div class="conf-bar-label"><span style="color:var(--amber)">Intermediate</span><span id="confInt" style="color:var(--amber)">0%</span></div>
+        <div class="conf-bar-track"><div class="conf-bar-fill conf-int" id="confIntBar"></div></div>
+      </div>
+      <div class="conf-bar-row" style="margin-top:10px">
+        <div class="conf-bar-label"><span style="color:var(--accent)">Advanced</span><span id="confAdv" style="color:var(--accent)">0%</span></div>
+        <div class="conf-bar-track"><div class="conf-bar-fill conf-adv" id="confAdvBar"></div></div>
+      </div>
+    </div>
+
+    <div class="analysis-grid">
+      <div class="info-card">
+        <div class="info-card-label">⚠ Detected Weaknesses</div>
+        <div id="aWeakList"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">💡 Suggestions</div>
+        <div id="aSuggList"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🦨 Code Smells</div>
+        <div id="aSmellList"></div>
+        <div id="aSmellEmpty" style="font-size:12px;color:var(--t3);display:none">✓ No code smells detected.</div>
+      </div>
+      <div class="info-card" style="text-align:center">
+        <div class="info-card-label" style="justify-content:center">🎯 Similarity to Ideal Code</div>
+        <div class="sim-ring-wrap">
+          <svg class="sim-ring-svg" width="100" height="100" viewBox="0 0 100 100">
+            <circle class="sim-track" cx="50" cy="50" r="40"/>
+            <circle class="sim-fill" id="simRing" cx="50" cy="50" r="40"/>
+          </svg>
+          <div class="sim-num" id="simNum">0%</div>
+        </div>
+        <div class="sim-label">vs. curated ideal reference (TF-IDF cosine)</div>
+      </div>
+      <div class="info-card" style="text-align:center">
+        <div class="info-card-label" style="justify-content:center">⏱ Time Complexity</div>
+        <div class="complexity-badge" id="cxBadge">—</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:8px" id="cxDetail"></div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px" id="cxLoops"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🏷 Language Profile</div>
+        <div id="aLangCard" style="font-size:12px;line-height:1.9;color:var(--t2)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════ PAGE: IMPROVEMENTS ════════════════════════════ -->
+<div class="page" id="page-improvements">
+  <div id="il" class="page-locked"><div class="page-locked-icon">⚡</div><p>Run an analysis on the <strong>Home</strong> tab first.</p></div>
+  <div id="ic" style="display:none">
+    <div class="page-heading">Code Improvements</div>
+    <div class="improvements-grid">
+      <div class="code-block">
+        <div class="code-block-header">
+          <span class="panel-title">
+            <span class="dot" style="background:#34d399"></span>
+            <span id="improvedFilename">improved_code.py</span>
+          </span>
+          <button class="btn btn-ghost" onclick="copyImproved()" style="padding:5px 11px;font-size:10px">📋 Copy</button>
+        </div>
+        <pre id="improvedPre"></pre>
+      </div>
+      <div class="quality-card">
+        <div class="quality-title">Code Quality Breakdown</div>
+        <div class="bar-row">
+          <div class="bar-label-row"><span class="bar-label">📖 Readability</span><span class="bar-value" id="vRead" style="color:var(--sky)">0</span></div>
+          <div class="bar-track"><div class="bar-fill bf-read" id="bRead"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label-row"><span class="bar-label">⚡ Efficiency</span><span class="bar-value" id="vEff" style="color:var(--green)">0</span></div>
+          <div class="bar-track"><div class="bar-fill bf-eff" id="bEff"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label-row"><span class="bar-label">🏗 Structure</span><span class="bar-value" id="vStr" style="color:var(--purple)">0</span></div>
+          <div class="bar-track"><div class="bar-fill bf-str" id="bStr"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label-row"><span class="bar-label">🔧 Maintainability</span><span class="bar-value" id="vMnt" style="color:var(--pink)">0</span></div>
+          <div class="bar-track"><div class="bar-fill bf-mnt" id="bMnt"></div></div>
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-family:var(--sans);font-size:11px;color:var(--t2);line-height:1.85">
+          <strong style="color:var(--t1)">Readability</strong> — comments, type hints, naming, line length<br>
+          <strong style="color:var(--t1)">Efficiency</strong>  — loop complexity, comprehensions, async patterns<br>
+          <strong style="color:var(--t1)">Structure</strong>   — functions, OOP, error handling, interfaces<br>
+          <strong style="color:var(--t1)">Maintainability</strong> — Halstead + Cyclomatic index (0–100)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════ PAGE: METRICS ══════════════════════════════════ -->
+<div class="page" id="page-metrics">
+  <div id="ml" class="page-locked"><div class="page-locked-icon">📐</div><p>Run an analysis on the <strong>Home</strong> tab first.</p></div>
+  <div id="mc" style="display:none">
+    <div class="page-heading">Advanced Metrics</div>
+    <div class="stat-chips" id="statChips"></div>
+    <div class="analysis-grid">
+      <div class="info-card">
+        <div class="info-card-label">📐 Halstead Metrics</div>
+        <div style="font-family:var(--sans);font-size:12px;color:var(--t2);line-height:1.75;margin-bottom:12px">
+          Halstead metrics quantify software complexity by counting <strong style="color:var(--t1)">operators</strong> (η₁, N₁) and <strong style="color:var(--t1)">operands</strong> (η₂, N₂) in source code. Derived measures predict maintenance effort, bug likelihood, and development time.
+        </div>
+        <div class="halstead-grid" id="halsteadGrid"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🔁 Cyclomatic Complexity (McCabe)</div>
+        <div style="font-family:var(--sans);font-size:12px;color:var(--t2);line-height:1.75;margin-bottom:14px">
+          Counts independent execution paths. Formula: <code style="font-family:var(--mono);font-size:10px;background:var(--s3);padding:1px 5px;border-radius:3px;color:var(--accent)">CC = decision_points + 1</code>.<br>
+          <strong style="color:var(--t1)">≤ 5</strong> Simple · <strong style="color:var(--amber)">6–10</strong> Moderate · <strong style="color:var(--red)">11+</strong> High risk
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-size:42px;font-weight:800" id="ccNum">—</div>
+            <div style="font-size:10px;color:var(--t3);letter-spacing:.12em;text-transform:uppercase">CC Value</div>
+          </div>
+          <div id="ccRating" style="font-size:13px;font-weight:600;padding:8px 16px;border-radius:8px"></div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🔬 Token Analysis</div>
+        <div id="tokenStats" style="font-size:12px;line-height:2;color:var(--t2)"></div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🏷 Feature Detection Map</div>
+        <div id="featureMap" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════ PAGE: REPORT ══════════════════════════════════ -->
+<div class="page" id="page-report">
+  <div id="rl" class="page-locked"><div class="page-locked-icon">📄</div><p>Run an analysis on the <strong>Home</strong> tab first.</p></div>
+  <div id="rc" style="display:none">
+    <div class="page-heading">Full Report</div>
+    <div class="report-container">
+      <div class="report-top">
+        <div>
+          <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--t3);margin-bottom:7px">Code Analysis Report · v3</div>
+          <div class="report-main-title">Coding Skill Gap Detector</div>
+          <div class="report-meta" id="rMeta">Generated —</div>
+        </div>
+        <div class="skill-badge" id="rBadge">—</div>
+      </div>
+      <div class="report-body">
+        <div class="report-section">
+          <div class="report-section-title">Summary</div>
+          <div class="report-row"><span class="report-row-key">Skill Level</span><span class="report-row-val" id="rSkill">—</span></div>
+          <div class="report-row"><span class="report-row-key">Score</span><span class="report-row-val" id="rScore">—</span></div>
+          <div class="report-row"><span class="report-row-key">Lines Analyzed</span><span class="report-row-val" id="rLines">—</span></div>
+          <div class="report-row"><span class="report-row-key">Token Count</span><span class="report-row-val" id="rTokens">—</span></div>
+          <div class="report-row"><span class="report-row-key">Time Complexity</span><span class="report-row-val" id="rCx">—</span></div>
+          <div class="report-row"><span class="report-row-key">Cyclomatic Complexity</span><span class="report-row-val" id="rCC">—</span></div>
+          <div class="report-row"><span class="report-row-key">Similarity to Ideal</span><span class="report-row-val" id="rSim">—</span></div>
+          <div class="report-row"><span class="report-row-key">Processing Time</span><span class="report-row-val" id="rMs">—</span></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title">Quality Breakdown</div>
+          <div class="report-row"><span class="report-row-key">Readability</span><span class="report-row-val" id="rRead">—</span></div>
+          <div class="report-row"><span class="report-row-key">Efficiency</span><span class="report-row-val" id="rEff">—</span></div>
+          <div class="report-row"><span class="report-row-key">Structure</span><span class="report-row-val" id="rStr">—</span></div>
+          <div class="report-row"><span class="report-row-key">Maintainability Index</span><span class="report-row-val" id="rMnt">—</span></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title">ML Confidence</div>
+          <div class="report-row"><span class="report-row-key">Beginner</span><span class="report-row-val" id="rCBeg">—</span></div>
+          <div class="report-row"><span class="report-row-key">Intermediate</span><span class="report-row-val" id="rCInt">—</span></div>
+          <div class="report-row"><span class="report-row-key">Advanced</span><span class="report-row-val" id="rCAdv">—</span></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title">Detected Weaknesses</div>
+          <div id="rWeakList"></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title">Improvement Suggestions</div>
+          <div id="rSuggList"></div>
+        </div>
+        <div class="report-section">
+          <div class="report-section-title">Code Smells</div>
+          <div id="rSmellList"></div>
+        </div>
+      </div>
+      <div class="report-actions">
+        <button class="btn btn-green" onclick="downloadReport()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Report (.txt)
+        </button>
+        <button class="btn btn-purple" onclick="downloadReport('json')">⬇ Export JSON</button>
+        <button class="btn btn-ghost" onclick="goTo('page-home')">← Back to Editor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════ PAGE: ABOUT ════════════════════════════════════ -->
+<div class="page" id="page-about">
+
+  <div class="page-heading">About This Project</div>
+
+  <!-- Purpose -->
+  <div class="about-section">
+    <div class="about-h2">🎯 Purpose & Problem Statement</div>
+    <div class="about-p">Traditional linters (ESLint, PyFlake8, Checkstyle) detect <strong>syntax errors and style violations</strong> but provide no signal about the <strong>skill level of the developer</strong> or the <strong>conceptual gaps</strong> in their code. A beginner and an expert can both write syntactically valid Python — yet their code is radically different in structure, robustness, and idioms.</div>
+    <div class="about-p">The <strong>Coding Skill Gap Detector</strong> bridges that gap by applying machine learning and program analysis to answer: <em>"What level is this developer at, and what should they learn next?"</em></div>
+    <div class="about-p">This tool is designed as a <strong>viva/demo-ready academic project</strong> demonstrating the full ML pipeline: data preparation → feature engineering → model training → inference → API → interactive UI.</div>
+  </div>
+
+  <!-- Who uses it -->
+  <div class="about-section">
+    <div class="about-h2">👥 Who Uses It & Why</div>
+    <div class="about-grid">
+      <div class="about-card"><div class="about-card-icon">🎓</div><div class="about-card-title">Students & Learners</div><div class="about-card-body">Get instant, objective feedback on code quality without waiting for a tutor. Understand <strong>why</strong> their code is beginner-level and what specific habits to change next.</div></div>
+      <div class="about-card"><div class="about-card-icon">👩‍🏫</div><div class="about-card-title">Educators & Bootcamps</div><div class="about-card-body">Automatically grade or screen student submissions for structural quality — not just correctness. Identify which students need OOP, error handling, or testing skills.</div></div>
+      <div class="about-card"><div class="about-card-icon">🏢</div><div class="about-card-title">Hiring Platforms</div><div class="about-card-body">Pre-screen technical test submissions for skill level alignment <strong>before</strong> human review. Filter candidates who submit copy-pasted, unstructured, or beginner-level solutions.</div></div>
+      <div class="about-card"><div class="about-card-icon">🔍</div><div class="about-card-title">Code Review Tools</div><div class="about-card-body">Embed as a pre-commit hook or CI pipeline step to flag structural regressions — not just style — when juniors submit PRs without error handling or tests.</div></div>
+      <div class="about-card"><div class="about-card-icon">📊</div><div class="about-card-title">Researchers</div><div class="about-card-body">Study how code patterns correlate with developer experience. The TF-IDF embedding space can be extended with real corpora (GitHub, CodeChef) for publication-quality research.</div></div>
+      <div class="about-card"><div class="about-card-icon">🧪</div><div class="about-card-title">ML Practitioners</div><div class="about-card-body">A practical demonstration that <strong>NLP techniques apply directly to source code</strong> — TF-IDF on code characters outperforms word-level tokenisation for cross-language classification.</div></div>
+    </div>
+  </div>
+
+  <!-- When -->
+  <div class="about-section">
+    <div class="about-h2">📅 When Is It Used?</div>
+    <div class="about-p">The tool is most valuable at <strong>three moments in the learning lifecycle</strong>:</div>
+    <div class="about-p"><strong>1. Before learning</strong> — Baseline assessment. A learner pastes their first attempt at a problem to understand their starting point and what gaps exist.</div>
+    <div class="about-p"><strong>2. During learning</strong> — Iterative feedback. Each improved attempt is re-analysed to track progress on specific metrics (error handling, type hints, OOP).</div>
+    <div class="about-p"><strong>3. Before submission / interviews</strong> — Final check. Confirm code meets intermediate/advanced structural standards before a technical interview or homework submission.</div>
+  </div>
+
+  <!-- Algorithm -->
+  <div class="about-section">
+    <div class="about-h2">🧠 Algorithm — Step by Step</div>
+    <div class="algo-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Input Preprocessing</div>
+        <div class="step-desc">Raw source code is received as a UTF-8 string via HTTP POST. It is stripped of leading/trailing whitespace. Language is normalised to lowercase. No tokenisation or AST parsing is performed — this is intentional (language-agnostic approach).</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">TF-IDF Vectorisation (Character N-grams)</div>
+        <div class="step-desc"><strong>Why character n-grams?</strong> Source code has no natural word boundaries across languages. <code>def</code>, <code>func</code>, <code>fn</code>, and <code>function</code> all mean "define a function" — but a word-level tokeniser would treat them as unrelated. Character n-grams (size 2–4) capture shared substrings across these keywords, indentation patterns, operator density, and punctuation style.<br><br>
+        <code>TfidfVectorizer(analyzer="char_wb", ngram_range=(2,4), max_features=5000, sublinear_tf=True)</code><br><br>
+        <strong>sublinear_tf=True</strong> applies <code>log(1 + tf)</code> instead of raw term frequency, preventing tokens that appear many times (like spaces or braces) from dominating the vector.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Logistic Regression Classification</div>
+        <div class="step-desc">The TF-IDF sparse matrix is fed into a <strong>Logistic Regression</strong> classifier trained on 60+ labelled snippets across 8 languages. It outputs class probabilities for Beginner (0), Intermediate (1), and Advanced (2).<br><br>
+        <strong>Why Logistic Regression over alternatives?</strong><br>
+        • <strong>vs SVM</strong>: LR provides probability outputs natively (Platt scaling required for SVM).<br>
+        • <strong>vs Random Forest</strong>: RF needs far more data to outperform LR on sparse TF-IDF space.<br>
+        • <strong>vs Neural Network</strong>: Overkill — the feature space is already rich from TF-IDF; a neural net would overfit on a 60-sample corpus.<br>
+        • <strong>L2 regularisation</strong> (<code>C=1.0</code>) prevents overfitting; <code>lbfgs</code> solver handles multi-class natively.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Rule-Based Feature Engine (20+ detectors)</div>
+        <div class="step-desc">The ML label is adjusted up or down based on deterministic regex/heuristic signals: functions, classes, error handling, imports, type hints, decorators, async patterns, generics, interfaces, unit tests, recursion. Each language has its own pattern set (e.g., Go's <code>if err != nil</code>, Ruby's <code>begin/rescue</code>, C++'s <code>template&lt;&gt;</code>).<br><br>
+        <strong>Why hybrid?</strong> Pure ML can mislabel a 3-line Python class as "Advanced" if the character patterns match training data. Rule-based signals provide hard guarantees — if there are no functions and no error handling, the score is bounded.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Cosine Similarity in TF-IDF Space</div>
+        <div class="step-desc">The user's code vector and a curated ideal reference vector (one per language) are compared using <code>cosine_similarity()</code>. This measures structural alignment — how similar the code's character patterns are to well-written idiomatic code.<br><br>
+        A score of 0.0 means completely dissimilar; 1.0 means identical character distribution. Typical beginner code scores 0.05–0.20; advanced code scores 0.40–0.75 against the reference.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">Halstead Metrics (Approximated)</div>
+        <div class="step-desc">Full Halstead requires a complete language lexer. We approximate by counting <strong>unique operators</strong> (η₁), <strong>total operators</strong> (N₁), <strong>unique operands</strong> (η₂), and <strong>total operands</strong> (N₂) via regex.<br><br>
+        Derived: <strong>Volume</strong> = N·log₂(η) — information content. <strong>Difficulty</strong> = (η₁/2)·(N₂/η₂) — error-proneness. <strong>Effort</strong> = D·V — cognitive effort to write/understand.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">Cyclomatic Complexity (McCabe)</div>
+        <div class="step-desc">Counts decision points in the code: <code>if, elif, else, for, while, case, catch, except, rescue, &&, ||</code>. Formula: <code>CC = decision_points + 1</code>. Values ≤5 indicate simple code; 6–10 is moderate; 11+ indicates code that is hard to test and maintain.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <div class="step-title">Maintainability Index</div>
+        <div class="step-desc">A composite metric from Microsoft Research:<br>
+        <code>MI = 171 − 5.2·ln(Volume) − 0.23·CC − 16.2·ln(Lines)</code><br>
+        Normalised 0–100. Values above 85 indicate highly maintainable code. Below 65 signals refactoring is needed.</div>
+      </div>
+    </div>
+    <div class="algo-step">
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <div class="step-title">Score Computation (Hybrid 0–100)</div>
+        <div class="step-desc"><strong>35%</strong> from ML class probability (confidence in predicted label).<br>
+        <strong>65%</strong> from 11 rule-based binary signals: functions, error handling, classes, comments, imports, type hints, async/recursion/decorators, unit tests, comprehensions, interfaces, generics.<br><br>
+        This weighting ensures ML and rule-based signals are equally influential — neither can dominate alone.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Languages -->
+  <div class="about-section">
+    <div class="about-h2">🌍 Supported Languages</div>
+    <div class="info-card">
+      <table class="lang-table">
+        <thead><tr><th>Language</th><th>Paradigm</th><th>Typing</th><th>Primary Use Case</th><th>Unique Detectors</th></tr></thead>
+        <tbody>
+          <tr><td>Python</td><td>Multi-paradigm</td><td>Dynamic</td><td>Data science, web, scripting</td><td>List comprehensions, decorators, type hints, f-strings</td></tr>
+          <tr><td>JavaScript</td><td>Event-driven, functional</td><td>Dynamic</td><td>Web frontends, Node.js</td><td>Arrow functions, Promises, destructuring</td></tr>
+          <tr><td>TypeScript</td><td>OOP, functional</td><td>Static (→ JS)</td><td>Large-scale web apps</td><td>Interface/type defs, generics, strict null checks</td></tr>
+          <tr><td>Java</td><td>Object-Oriented</td><td>Static</td><td>Enterprise, Android</td><td>Generics, Stream API, @annotations, checked exceptions</td></tr>
+          <tr><td>C++</td><td>Multi-paradigm, systems</td><td>Static</td><td>Game engines, embedded</td><td>Templates, smart pointers, RAII, STL algorithms</td></tr>
+          <tr><td>C#</td><td>OOP, functional</td><td>Static</td><td>.NET, Unity, enterprise</td><td>LINQ, async Task, records, [attributes]</td></tr>
+          <tr><td>Ruby</td><td>OOP, functional</td><td>Dynamic</td><td>Web (Rails), DevOps</td><td>Modules/mixins, blocks, begin/rescue, frozen literals</td></tr>
+          <tr><td>Go</td><td>Procedural, concurrent</td><td>Static</td><td>Cloud, CLIs, microservices</td><td>goroutines, channels, if err != nil, struct methods</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Why these choices -->
+  <div class="about-section">
+    <div class="about-h2">🤔 Why These Specific Technology Choices?</div>
+    <div class="about-grid">
+      <div class="about-card"><div class="about-card-icon">🐍</div><div class="about-card-title">Flask (not Django/FastAPI)</div><div class="about-card-body">Flask is minimal — no ORM, no admin panel, no bloat. For a single-endpoint ML API, Flask lets the <strong>ML code be the hero</strong>, not the framework. FastAPI would add async complexity without benefit for a synchronous sklearn model.</div></div>
+      <div class="about-card"><div class="about-card-icon">📊</div><div class="about-card-title">scikit-learn (not PyTorch/HuggingFace)</div><div class="about-card-body">The task does not require deep learning. TF-IDF + Logistic Regression achieves strong separability on the feature space with <strong>zero GPU requirement, millisecond inference, and full interpretability</strong>. Adding CodeBERT would require 400MB+ model weights for marginal gain on a small corpus.</div></div>
+      <div class="about-card"><div class="about-card-icon">🔤</div><div class="about-card-title">char_wb N-grams (not word tokens)</div><div class="about-card-body">Source code is not natural language. Keywords differ across languages (<code>def</code> vs <code>func</code> vs <code>function</code>). Character n-grams are <strong>language-agnostic</strong> and capture indentation depth, operator density, and structural patterns without a per-language lexer.</div></div>
+      <div class="about-card"><div class="about-card-icon">📐</div><div class="about-card-title">Halstead + Cyclomatic (not AST metrics)</div><div class="about-card-body">Full AST parsing requires a language-specific parser per language (8 parsers). Regex-based approximations give <strong>90% of the signal at 1% of the complexity</strong>. They are sufficient for educational feedback even if not production-grade static analysis.</div></div>
+      <div class="about-card"><div class="about-card-icon">🎨</div><div class="about-card-title">Single HTML File (no React/Vue)</div><div class="about-card-body">Zero build step. No npm install, no webpack, no node_modules. The entire 1,200-line frontend runs directly from a file:// URL or any static host. <strong>Portability beats modularity</strong> for a demo/viva project.</div></div>
+      <div class="about-card"><div class="about-card-icon">🔗</div><div class="about-card-title">Cosine Similarity over Edit Distance</div><div class="about-card-body">Edit distance (Levenshtein) is O(n²) and sensitive to formatting. Cosine similarity in TF-IDF space is O(n) and measures <strong>conceptual similarity</strong> — two differently formatted but structurally similar programs will score high, as expected.</div></div>
+    </div>
+  </div>
+
+  <!-- Limitations -->
+  <div class="about-section">
+    <div class="about-h2">⚠ Known Limitations & Future Work</div>
+    <div class="about-p"><strong>Corpus size:</strong> 60+ synthetic samples is sufficient to demonstrate the pipeline but would be replaced by a real dataset (e.g., CodeNet, GitHub GH Archive) in production. More data → better ML generalisation.</div>
+    <div class="about-p"><strong>No AST parsing:</strong> Regex-based detectors can be fooled by code in comments or strings. A production system would use language-specific parsers (tree-sitter, javalang, go/ast).</div>
+    <div class="about-p"><strong>Improved code is rule-based:</strong> The "improved code" output applies fixed transformations. A true code improvement engine would require a large language model (GPT-4, Claude) or program synthesis techniques.</div>
+    <div class="about-p"><strong>Future extensions:</strong> (1) Train on real GitHub repositories by skill tier. (2) Integrate CodeBERT embeddings as additional features. (3) Add plagiarism detection via pairwise cosine similarity. (4) Build a VS Code extension. (5) Add support for Swift, Kotlin, Rust, PHP.</div>
+  </div>
+
+  <div style="text-align:center;padding:20px 0;border-top:1px solid var(--border);font-family:var(--sans);font-size:12px;color:var(--t3)">
+    Built with <span style="color:var(--accent)">Flask · scikit-learn · TF-IDF · Logistic Regression</span> — No GPU required · Runs fully offline
+  </div>
+</div>
+
+</main>
+
+<div id="toast"></div>
+<footer>Coding Skill Gap Detector <span>v3</span> · 8 Languages · TF-IDF + Logistic Regression · Flask 5000 · Ctrl+Enter to analyze</footer>
+
+<!-- ═══════════════════════════ JAVASCRIPT ══════════════════════════════════ -->
+<script src="./config.js"></script>
+<script>
+/* ── Config ─────────────────────────────────────────────────────────────── */
+const API_BASE_URL =
+  (window.APP_CONFIG && window.APP_CONFIG.API_BASE_URL)
+  ? window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, "")
+  : "http://127.0.0.1:5000";
+const API_URL = `${API_BASE_URL}/analyze`;
+let lastResult = null;
+
+/* ── Sample code per language ───────────────────────────────────────────── */
+const SAMPLES = {
+  python:`# Beginner Python — gaps: no functions, no error handling, nested loops
+x = 10
+y = 20
+total = x + y
+print("Sum:", total)
+
+for i in range(5):
+    for j in range(5):
+        print(i * j)
+`,
+  javascript:`// Intermediate JS — gaps: no try/catch
+function fetchUser(id) {
+  return fetch("/api/users/" + id)
+    .then(function(response) {
+      return response.json();
+    });
+}
+fetchUser(42).then(function(user) {
+  console.log(user.name);
+});
+`,
+  typescript:`// TypeScript — gaps: no error handling, no generics
+function processItems(items: number[]): number[] {
+  const result = [];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] > 0) {
+      result.push(items[i] * 2);
+    }
+  }
+  return result;
+}
+console.log(processItems([1, -2, 3, -4, 5]));
+`,
+  java:`// Java — gaps: no error handling, no imports
+public class Calculator {
+    public static int divide(int a, int b) {
+        return a / b;
+    }
+    public static void main(String[] args) {
+        int result = divide(10, 0);
+        System.out.println(result);
+    }
+}
+`,
+  cpp:`// C++ — gaps: raw pointer, no exception handling
+#include <iostream>
+int main() {
+    int* arr = new int[5];
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            arr[i] = i * j;
+            std::cout << arr[i] << " ";
+        }
+    }
+    // delete[] arr; // forgot!
+    return 0;
+}
+`,
+  csharp:`// C# — gaps: no null check, no async
+using System;
+using System.Collections.Generic;
+class Program {
+    static List<int> Process(List<int> data) {
+        var result = new List<int>();
+        foreach (var item in data) {
+            if (item > 0) result.Add(item * 2);
+        }
+        return result;
+    }
+    static void Main() {
+        Console.WriteLine(Process(new List<int>{1,-2,3,-4,5}).Count);
+    }
+}
+`,
+  ruby:`# Ruby — gaps: no error handling, no modules
+def process(data)
+  result = []
+  data.each do |x|
+    if x > 0
+      result << x * 2
+    end
+  end
+  result
+end
+puts process([1, -2, 3, -4, 5])
+`,
+  go:`// Go — gaps: no error handling pattern
+package main
+import "fmt"
+func divide(a, b int) int {
+    return a / b
+}
+func main() {
+    result := divide(10, 2)
+    fmt.Println(result)
+}
+`,
+};
+
+/* ── Page Navigation ─────────────────────────────────────────────────────── */
+function showPage(pageId, tabEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  if (tabEl) tabEl.classList.add('active');
+  if (lastResult) {
+    if (pageId==='page-analysis')     populateAnalysis(lastResult);
+    if (pageId==='page-improvements') populateImprovements(lastResult);
+    if (pageId==='page-metrics')      populateMetrics(lastResult);
+    if (pageId==='page-report')       populateReport(lastResult);
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function goTo(pageId) {
+  const tab = document.querySelector(`[data-page="${pageId}"]`);
+  showPage(pageId, tab);
+}
+
+/* ── Line numbers ────────────────────────────────────────────────────────── */
+const editor   = document.getElementById("codeEditor");
+const lineNums = document.getElementById("lineNumbers");
+function updateLineNumbers() {
+  const n = editor.value.split("\n").length;
+  lineNums.textContent = Array.from({length:n},(_,i)=>i+1).join("\n");
+}
+editor.addEventListener("input",  updateLineNumbers);
+editor.addEventListener("scroll", () => { lineNums.style.marginTop=`-${editor.scrollTop}px`; });
+editor.addEventListener("keydown", e => {
+  if (e.key==="Tab") {
+    e.preventDefault();
+    const s = editor.selectionStart;
+    editor.value = editor.value.substring(0,s)+"  "+editor.value.substring(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = s+2;
+    updateLineNumbers();
+  }
+});
+updateLineNumbers();
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function escapeHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function showToast(msg, type="error", dur=3500) {
+  const t = document.getElementById("toast");
+  t.textContent=msg; t.className=type==="success"?"visible success":"visible";
+  setTimeout(()=>t.className="",dur);
+}
+function setStatus(text){document.getElementById("statusLabel").textContent=text;}
+function clearEditor(){
+  editor.value="";updateLineNumbers();resetHome();lastResult=null;
+}
+function loadSample(){
+  const lang=document.getElementById("langSelect").value;
+  editor.value=SAMPLES[lang]||SAMPLES.python;
+  updateLineNumbers();resetHome();
+}
+function resetHome(){
+  document.getElementById("emptyState").style.display="block";
+  document.getElementById("loadingState").style.display="none";
+  document.getElementById("homeResults").style.display="none";
+  setStatus("READY");
+}
+
+/* ── Ring animations ─────────────────────────────────────────────────────── */
+const CIRC = 2*Math.PI*36;
+function animateRing(ringId,numId,score,color){
+  const ring=document.getElementById(ringId);
+  const num =document.getElementById(numId);
+  ring.style.stroke=color;
+  ring.style.strokeDashoffset=CIRC*(1-score/100);
+  num.style.color=color;
+  let cur=0,step=Math.ceil(score/40);
+  const t=setInterval(()=>{cur=Math.min(cur+step,score);num.textContent=cur;if(cur>=score)clearInterval(t);},25);
+}
+function scoreColor(s){return s>=70?"#00e5ff":s>=40?"#fbbf24":"#f87171";}
+function animateSim(pct){
+  const C=2*Math.PI*40;
+  document.getElementById("simRing").style.strokeDashoffset=C*(1-pct/100);
+  const num=document.getElementById("simNum");
+  let cur=0;
+  const t=setInterval(()=>{cur=Math.min(cur+2,pct);num.textContent=cur+"%";if(cur>=pct)clearInterval(t);},18);
+}
+function animateBar(barId,valId,value){
+  setTimeout(()=>{document.getElementById(barId).style.width=value+"%";},90);
+  let cur=0;
+  const t=setInterval(()=>{cur=Math.min(cur+2,value);document.getElementById(valId).textContent=cur;if(cur>=value)clearInterval(t);},16);
+}
+function animateConfBar(barId,spanId,value){
+  setTimeout(()=>{document.getElementById(barId).style.width=value+"%";},90);
+  document.getElementById(spanId).textContent=value+"%";
+}
+
+/* ── Render list ─────────────────────────────────────────────────────────── */
+function renderList(containerId,items,cls,icon){
+  const el=document.getElementById(containerId);
+  el.innerHTML="";
+  (items||[]).forEach((item,i)=>{
+    const d=document.createElement("div");
+    d.className=`gap-item ${cls}`;
+    d.style.animationDelay=`${i*55}ms`;
+    d.innerHTML=`<span class="gap-icon">${icon}</span><span>${escapeHtml(item)}</span>`;
+    el.appendChild(d);
+  });
+}
+
+/* ── Populate Home ───────────────────────────────────────────────────────── */
+function populateHome(data){
+  const badge=document.getElementById("skillBadge");
+  badge.textContent=data.skill_level;
+  badge.className="skill-badge "+(data.skill_level||"").toLowerCase();
+  document.getElementById("homeScoreLabel").textContent=
+    `Score ${data.score}/100 · ${data.lines_analyzed} lines · ${data.processing_ms}ms`;
+  animateRing("scoreRing","scoreNum",data.score,scoreColor(data.score));
+  renderList("homeWeakList",data.weaknesses,"weakness","⚠");
+  renderList("homeSuggList",data.suggestions,"suggestion","→");
+  document.getElementById("emptyState").style.display="none";
+  document.getElementById("loadingState").style.display="none";
+  document.getElementById("homeResults").style.display="block";
+  setStatus("DONE");
+}
+
+/* ── Populate Analysis ───────────────────────────────────────────────────── */
+function populateAnalysis(data){
+  document.getElementById("al").style.display="none";
+  document.getElementById("ac").style.display="block";
+  document.getElementById("aTimestamp").textContent="· "+new Date().toLocaleTimeString();
+  const lang=document.getElementById("langSelect").value;
+  document.getElementById("aLines").textContent=
+    `${data.lines_analyzed} lines · ${data.token_count} tokens · ${lang}`;
+
+  const b2=document.getElementById("skillBadge2");
+  b2.textContent=data.skill_level;b2.className="skill-badge "+(data.skill_level||"").toLowerCase();
+  animateRing("scoreRing2","scoreNum2",data.score,scoreColor(data.score));
+
+  // ML confidence
+  const c=data.ml_confidence||{};
+  animateConfBar("confBegBar","confBeg",Math.round(c.beginner||0));
+  animateConfBar("confIntBar","confInt",Math.round(c.intermediate||0));
+  animateConfBar("confAdvBar","confAdv",Math.round(c.advanced||0));
+
+  // Lists
+  renderList("aWeakList",data.weaknesses,"weakness","⚠");
+  renderList("aSuggList",data.suggestions,"suggestion","→");
+
+  // Smells
+  const smells=data.code_smells||[];
+  renderList("aSmellList",smells,"smell","🦨");
+  document.getElementById("aSmellEmpty").style.display=smells.length?"none":"block";
+
+  // Similarity
+  const simPct=Math.round((data.similarity_score||0)*100);
+  animateSim(simPct);
+
+  // Complexity
+  const cx=data.complexity||{};
+  document.getElementById("cxBadge").textContent=cx.label||"—";
+  document.getElementById("cxDetail").textContent=cx.detail||"";
+  document.getElementById("cxLoops").textContent=cx.loop_depth!==undefined?`Loop nesting depth: ${cx.loop_depth}`:"";
+
+  // Lang profile
+  const lp=data.lang_profile||{};
+  document.getElementById("aLangCard").innerHTML=
+    `<strong style="color:var(--t1)">Paradigm:</strong> ${lp.paradigm||"—"}<br>
+     <strong style="color:var(--t1)">Type System:</strong> ${lp.typing||"—"}<br>
+     <strong style="color:var(--t1)">Use Cases:</strong> ${lp.use_case||"—"}`;
+  document.getElementById("aLangProfile").textContent=lp.paradigm||"";
+}
+
+/* ── Populate Improvements ───────────────────────────────────────────────── */
+function populateImprovements(data){
+  document.getElementById("il").style.display="none";
+  document.getElementById("ic").style.display="block";
+  document.getElementById("improvedPre").textContent=data.improved_code||"// No output.";
+  const ext={python:".py",javascript:".js",typescript:".ts",java:".java",cpp:".cpp",csharp:".cs",ruby:".rb",go:".go"};
+  const lang=document.getElementById("langSelect").value;
+  document.getElementById("improvedFilename").textContent="improved_code"+(ext[lang]||".txt");
+  const bd=data.breakdown||{};
+  animateBar("bRead","vRead",bd.readability||0);
+  animateBar("bEff","vEff",bd.efficiency||0);
+  animateBar("bStr","vStr",bd.structure||0);
+  animateBar("bMnt","vMnt",bd.maintainability||0);
+}
+
+/* ── Populate Metrics ────────────────────────────────────────────────────── */
+function populateMetrics(data){
+  document.getElementById("ml").style.display="none";
+  document.getElementById("mc").style.display="block";
+  const bd=data.breakdown||{};
+  const h=bd.halstead||{};
+  const cc=bd.cyclomatic||1;
+
+  // Stat chips
+  const chips=[
+    {val:data.score,lbl:"Score",color:scoreColor(data.score)},
+    {val:data.lines_analyzed,lbl:"Lines",color:"var(--accent)"},
+    {val:data.token_count,lbl:"Tokens",color:"var(--sky)"},
+    {val:data.branch_count,lbl:"Branches",color:"var(--amber)"},
+    {val:cc,lbl:"Cyclomatic",color:cc>10?"var(--red)":cc>5?"var(--amber)":"var(--green)"},
+    {val:data.processing_ms+"ms",lbl:"Process Time",color:"var(--purple)"},
+  ];
+  document.getElementById("statChips").innerHTML=chips.map(c=>
+    `<div class="stat-chip"><div class="chip-val" style="color:${c.color}">${c.val}</div><div class="chip-lbl">${c.lbl}</div></div>`
+  ).join("");
+
+  // Halstead grid
+  document.getElementById("halsteadGrid").innerHTML=[
+    {val:h.vocabulary,lbl:"Vocabulary (η)"},
+    {val:h.length,    lbl:"Length (N)"},
+    {val:h.volume,    lbl:"Volume (V)"},
+    {val:h.difficulty,lbl:"Difficulty (D)"},
+    {val:h.effort,    lbl:"Effort (E)"},
+    {val:bd.maintainability,lbl:"Maint. Index"},
+  ].map(x=>`<div class="h-chip"><div class="h-val">${x.val??'—'}</div><div class="h-lbl">${x.lbl}</div></div>`).join("");
+
+  // Cyclomatic
+  document.getElementById("ccNum").textContent=cc;
+  document.getElementById("ccNum").style.color=cc>10?"var(--red)":cc>5?"var(--amber)":"var(--green)";
+  const ccRatingEl=document.getElementById("ccRating");
+  if(cc<=5){ccRatingEl.textContent="Simple ✓";ccRatingEl.style.background="var(--green-d)";ccRatingEl.style.color="var(--green)";}
+  else if(cc<=10){ccRatingEl.textContent="Moderate ⚡";ccRatingEl.style.background="var(--amber-d)";ccRatingEl.style.color="var(--amber)";}
+  else{ccRatingEl.textContent="High Risk ⚠";ccRatingEl.style.background="var(--red-d)";ccRatingEl.style.color="var(--red)";}
+
+  // Token stats
+  document.getElementById("tokenStats").innerHTML=
+    `Lines: <strong style="color:var(--t1)">${data.lines_analyzed}</strong><br>
+     Tokens: <strong style="color:var(--t1)">${data.token_count}</strong><br>
+     Branches: <strong style="color:var(--t1)">${data.branch_count}</strong><br>
+     Avg tokens/line: <strong style="color:var(--t1)">${data.lines_analyzed?Math.round(data.token_count/data.lines_analyzed):0}</strong><br>
+     Similarity: <strong style="color:var(--t1)">${Math.round((data.similarity_score||0)*100)}%</strong>`;
+
+  // Feature detection map
+  const feats=[
+    {label:"Functions",    val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("function"))},
+    {label:"Error Handling",val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("error handling"))},
+    {label:"Classes/OOP",  val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("OOP"))},
+    {label:"Comments",     val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("comment"))},
+    {label:"Imports",      val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("import"))},
+    {label:"Type Hints",   val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("type"))},
+    {label:"Unit Tests",   val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("test"))},
+    {label:"Comprehensions",val:data.weaknesses&&!data.weaknesses.some(w=>w.includes("comprehension"))},
+  ];
+  document.getElementById("featureMap").innerHTML=feats.map(f=>
+    `<span class="tag ${f.val?'tag-green':'tag-amber'}">${f.val?'✓':'✗'} ${f.label}</span>`
+  ).join("");
+}
+
+/* ── Populate Report ─────────────────────────────────────────────────────── */
+function populateReport(data){
+  document.getElementById("rl").style.display="none";
+  document.getElementById("rc").style.display="block";
+  const now=new Date().toLocaleString();
+  document.getElementById("rMeta").textContent="Generated "+now;
+  const rb=document.getElementById("rBadge");
+  rb.textContent=data.skill_level;rb.className="skill-badge "+(data.skill_level||"").toLowerCase();
+  document.getElementById("rSkill").textContent=data.skill_level||"—";
+  document.getElementById("rScore").textContent=`${data.score}/100`;
+  document.getElementById("rLines").textContent=`${data.lines_analyzed} lines`;
+  document.getElementById("rTokens").textContent=`${data.token_count} tokens`;
+  const cx=data.complexity||{};
+  document.getElementById("rCx").textContent=cx.label||"—";
+  const bd=data.breakdown||{};
+  document.getElementById("rCC").textContent=bd.cyclomatic||"—";
+  document.getElementById("rSim").textContent=Math.round((data.similarity_score||0)*100)+"%";
+  document.getElementById("rMs").textContent=data.processing_ms+"ms";
+  document.getElementById("rRead").textContent=(bd.readability||0)+"/100";
+  document.getElementById("rEff").textContent=(bd.efficiency||0)+"/100";
+  document.getElementById("rStr").textContent=(bd.structure||0)+"/100";
+  document.getElementById("rMnt").textContent=(bd.maintainability||0)+"/100";
+  const c=data.ml_confidence||{};
+  document.getElementById("rCBeg").textContent=Math.round(c.beginner||0)+"%";
+  document.getElementById("rCInt").textContent=Math.round(c.intermediate||0)+"%";
+  document.getElementById("rCAdv").textContent=Math.round(c.advanced||0)+"%";
+  // Lists
+  document.getElementById("rWeakList").innerHTML=(data.weaknesses||[]).map(w=>`<div class="report-list-item w">⚠ ${escapeHtml(w)}</div>`).join("");
+  document.getElementById("rSuggList").innerHTML=(data.suggestions||[]).map(s=>`<div class="report-list-item s">→ ${escapeHtml(s)}</div>`).join("");
+  document.getElementById("rSmellList").innerHTML=(data.code_smells||[]).length
+    ?(data.code_smells||[]).map(s=>`<div class="report-list-item sm">🦨 ${escapeHtml(s)}</div>`).join("")
+    :`<div class="report-list-item s">✓ No code smells detected.</div>`;
+}
+
+/* ── Download helpers ────────────────────────────────────────────────────── */
+function downloadReport(fmt="txt"){
+  if(!lastResult){showToast("⚠ No analysis to download yet.");return;}
+  const d=lastResult,bd=d.breakdown||{},h=bd.halstead||{},c=d.ml_confidence||{},cx=d.complexity||{};
+  if(fmt==="json"){
+    const blob=new Blob([JSON.stringify(lastResult,null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="skill_gap_report.json";a.click();
+    return;
+  }
+  const lines=[
+    "╔══════════════════════════════════════════════════════════════╗",
+    "║         CODING SKILL GAP DETECTOR — ANALYSIS REPORT v3      ║",
+    "╚══════════════════════════════════════════════════════════════╝",
+    `Generated : ${new Date().toLocaleString()}`,
+    `Language  : ${document.getElementById("langSelect").value}`,
+    "",
+    "── SUMMARY ──────────────────────────────────────────────────────",
+    `Skill Level    : ${d.skill_level}`,
+    `Score          : ${d.score} / 100`,
+    `Lines Analyzed : ${d.lines_analyzed}`,
+    `Token Count    : ${d.token_count}`,
+    `Time Complexity: ${cx.label}  (${cx.detail})`,
+    `Cyclomatic CC  : ${bd.cyclomatic}`,
+    `Similarity     : ${Math.round((d.similarity_score||0)*100)}%`,
+    `Processing     : ${d.processing_ms}ms`,
+    "",
+    "── ML CONFIDENCE ────────────────────────────────────────────────",
+    `Beginner       : ${Math.round(c.beginner||0)}%`,
+    `Intermediate   : ${Math.round(c.intermediate||0)}%`,
+    `Advanced       : ${Math.round(c.advanced||0)}%`,
+    "",
+    "── QUALITY BREAKDOWN ────────────────────────────────────────────",
+    `Readability    : ${bd.readability} / 100`,
+    `Efficiency     : ${bd.efficiency}  / 100`,
+    `Structure      : ${bd.structure}   / 100`,
+    `Maintainability: ${bd.maintainability} / 100`,
+    "",
+    "── HALSTEAD METRICS ─────────────────────────────────────────────",
+    `Vocabulary     : ${h.vocabulary}`,
+    `Program Length : ${h.length}`,
+    `Volume         : ${h.volume}`,
+    `Difficulty     : ${h.difficulty}`,
+    `Effort         : ${h.effort}`,
+    "",
+    "── DETECTED WEAKNESSES ──────────────────────────────────────────",
+    ...(d.weaknesses||[]).map((w,i)=>`${i+1}. ${w}`),
+    "",
+    "── IMPROVEMENT SUGGESTIONS ──────────────────────────────────────",
+    ...(d.suggestions||[]).map((s,i)=>`${i+1}. ${s}`),
+    "",
+    "── CODE SMELLS ──────────────────────────────────────────────────",
+    ...((d.code_smells||[]).length?(d.code_smells||[]).map((s,i)=>`${i+1}. ${s}`):["None detected."]),
+    "",
+    "── IMPROVED CODE ────────────────────────────────────────────────",
+    d.improved_code||"(none)",
+    "",
+    "╔══════════════════════════════════════════════════════════════╗",
+    "║  Algorithm: TF-IDF (char_wb, 2-4gram) + Logistic Regression ║",
+    "║  8 Languages · 20+ Rule-Based Detectors · Halstead Metrics  ║",
+    "╚══════════════════════════════════════════════════════════════╝",
+  ];
+  const blob=new Blob([lines.join("\n")],{type:"text/plain"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="skill_gap_report.txt";a.click();
+}
+
+function copyImproved(){
+  if(!lastResult)return;
+  navigator.clipboard.writeText(lastResult.improved_code||"").then(()=>{
+    showToast("✓ Improved code copied!","success",2200);
+  });
+}
+
+/* ── Main: Analyze ───────────────────────────────────────────────────────── */
+async function analyzeCode(){
+  const code=editor.value.trim();
+  if(!code){showToast("⚠ Please enter some code before analyzing.");return;}
+  const lang=document.getElementById("langSelect").value;
+  const btn=document.getElementById("analyzeBtn");
+
+  btn.disabled=true;
+  btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin .7s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Analyzing…`;
+
+  document.getElementById("emptyState").style.display="none";
+  document.getElementById("homeResults").style.display="none";
+  document.getElementById("loadingState").style.display="block";
+  setStatus("RUNNING ML…");
+
+  try{
+    const res=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({code,language:lang}),
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err.error||`Server error ${res.status}`);
+    }
+    const data=await res.json();
+    lastResult=data;
+    populateHome(data);
+    populateAnalysis(data);
+    populateImprovements(data);
+    populateMetrics(data);
+    populateReport(data);
+    showToast("✓ Analysis complete — explore the tabs!","success",3500);
+  }catch(err){
+    document.getElementById("loadingState").style.display="none";
+    document.getElementById("emptyState").style.display="block";
+    setStatus("ERROR");
+    if(err.message.includes("Failed to fetch")||err.message.includes("NetworkError")){
+      showToast("❌ Cannot reach Flask backend on port 5000. Is it running?",undefined,6000);
+    }else{
+      showToast("❌ "+err.message,undefined,5000);
+    }
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Analyze Code`;
+  }
+}
+
+/* ── Keyboard shortcut ───────────────────────────────────────────────────── */
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="Enter") analyzeCode();
+});
+</script>
+</body>
+</html>
