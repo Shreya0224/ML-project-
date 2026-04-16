@@ -9,7 +9,7 @@ Your `app.py` file is a Flask backend API. Amplify static hosting does not run a
 So the correct setup is:
 
 1. Host the frontend on AWS Amplify
-2. Host the Flask backend separately on AWS App Runner, Elastic Beanstalk, EC2, or AWS Lambda/API Gateway
+2. Host the Flask backend separately on AWS Elastic Beanstalk, App Runner, EC2, or AWS Lambda/API Gateway
 3. Put the backend URL inside `config.js`
 
 ## Files added for deployment
@@ -17,6 +17,7 @@ So the correct setup is:
 - `amplify.yml`: tells Amplify how to deploy this static site
 - `config.js`: stores the backend API base URL
 - `requirements.txt`: backend Python dependencies
+- `Procfile`: tells Elastic Beanstalk how to start the Flask app
 - `.gitignore`: keeps local Python files out of git
 
 ## Before deploying
@@ -71,10 +72,35 @@ After deployment, Amplify will give you a frontend URL like:
 
 For the Flask backend, the easiest AWS choices are:
 
-1. `AWS App Runner`
-2. `AWS Elastic Beanstalk`
+1. `AWS Elastic Beanstalk`
+2. `AWS App Runner`
 
-If you want the simplest path, use `AWS App Runner` or `Elastic Beanstalk` for `app.py`.
+If you want a Flask-friendly AWS path, use `AWS Elastic Beanstalk` for `app.py`.
+
+## Deploy backend with Elastic Beanstalk
+
+1. Push this full project to GitHub
+2. Open AWS Console
+3. Search for `Elastic Beanstalk`
+4. Click `Create application`
+5. Application name: choose a name like `ml-project-backend`
+6. Platform: `Python`
+7. Platform branch: choose the current Python platform
+8. Application code:
+   - If using GitHub integration, choose your repository and branch
+   - If using upload, upload a ZIP of this project folder
+9. Create the environment
+
+Elastic Beanstalk will use:
+
+- `requirements.txt` to install dependencies
+- `Procfile` to start the app with `gunicorn app:app`
+
+After deployment, open:
+
+`https://your-eb-url/health`
+
+If you see the JSON health response, your backend is ready.
 
 ## Local test before deployment
 
